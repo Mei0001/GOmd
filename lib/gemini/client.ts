@@ -1,130 +1,107 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { UploadedFile } from '@/types';
+import { GoogleGenAI } from '@google/genai';
 
 export class GeminiClient {
-  private ai: GoogleGenerativeAI;
-  private model: string = 'gemini-2.0-flash-exp';
+  private ai: GoogleGenAI;
+  private model: string = 'gemini-2.5-pro';
 
   constructor(apiKey: string) {
-    this.ai = new GoogleGenerativeAI(apiKey);
+    this.ai = new GoogleGenAI({ apiKey });
   }
 
-  // ファイルアップロード
-  async uploadFile(file: File): Promise<UploadedFile> {
+  // PDFファイルを直接処理してMarkdownを生成（20MB未満）
+  async generateContentFromPDF(pdfBuffer: Buffer, prompt: string): Promise<string> {
     try {
-      // ファイルのバイナリデータを取得
-      const buffer = await file.arrayBuffer();
-      const uint8Array = new Uint8Array(buffer);
+      const contents = [
+        { text: prompt },
+        {
+          inlineData: {
+            mimeType: 'application/pdf',
+            data: pdfBuffer.toString('base64')
+          }
+        }
+      ];
 
-      // 一時的なファイル情報を返す（実際のAPIでは適切な実装が必要）
-      return {
-        uri: `temp://${file.name}`,
-        mimeType: file.type,
-        name: file.name,
-        sizeBytes: file.size,
-        createTime: new Date().toISOString(),
-        updateTime: new Date().toISOString(),
-        expirationTime: new Date(Date.now() + 3600000).toISOString(), // 1時間後
-      };
+      const response = await this.ai.models.generateContent({
+        model: this.model,
+        contents: contents
+      });
+
+      return response.text || '';
     } catch (error) {
-      console.error('ファイルアップロードエラー:', error);
-      throw new Error('ファイルのアップロードに失敗しました');
+      console.error('Gemini PDF処理エラー:', error);
+      throw new Error('PDFの処理に失敗しました');
     }
   }
 
-  // コンテンツ生成（ストリーミング）- テキストベース
-  async generateContentStream(extractedText: string, prompt: string) {
+  // 大きなPDFファイル用（File API使用、20MB以上）
+  async generateContentFromLargePDF(pdfBuffer: Buffer, fileName: string, prompt: string): Promise<string> {
     try {
-      const model = this.ai.getGenerativeModel({ model: this.model });
+      const fileBlob = new Blob([pdfBuffer], { type: 'application/pdf' });
+
+      const file = await this.ai.files.upload({
+        file: fileBlob,
+        config: {
+          displayName: fileName,
+        },
+      });
+
+      // ファイル処理完了まで待機
+      if (!file.name) {
+        throw new Error('ファイル名が取得できませんでした');
+      }
       
-      // プロンプトとPDFから抽出したテキストを組み合わせる
-      const fullPrompt = `${prompt}
+      let getFile = await this.ai.files.get({ name: file.name });
+      while (getFile.state === 'PROCESSING') {
+        console.log(`ファイル処理中: ${getFile.state}`);
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+        getFile = await this.ai.files.get({ name: file.name });
+      }
 
-以下はPDFから抽出したテキストです：
+      if (getFile.state === 'FAILED') {
+        throw new Error('ファイル処理に失敗しました');
+      }
 
----
-${extractedText}
----
+      const contents: any[] = [
+        { text: prompt }
+      ];
 
-上記のテキストを分析して、数式はLaTeX形式（$$...$$）で、表はMarkdownテーブル形式で、適切にMarkdownに変換してください。`;
-      
-      const response = await model.generateContentStream(fullPrompt);
-      return response;
+      if (file.uri && file.mimeType) {
+        // @google/genai のAPIに合わせた正しい形式
+        const { createPartFromUri } = await import('@google/genai');
+        const fileContent = createPartFromUri(file.uri, file.mimeType);
+        contents.push(fileContent);
+      }
+
+      const response = await this.ai.models.generateContent({
+        model: this.model,
+        contents: contents,
+      });
+
+      return response.text || '';
     } catch (error) {
-      console.error('コンテンツ生成エラー:', error);
-      throw new Error('コンテンツの生成に失敗しました');
+      console.error('Gemini 大きなPDF処理エラー:', error);
+      throw new Error('大きなPDFの処理に失敗しました');
     }
   }
 
-  // コンテンツ生成（非ストリーミング）- テキストベース
-  async generateContent(extractedText: string, prompt: string): Promise<string> {
+  // API接続テスト
+  async testConnection(): Promise<boolean> {
     try {
-      const model = this.ai.getGenerativeModel({ model: this.model });
-      
-      // プロンプトとPDFから抽出したテキストを組み合わせる
-      const fullPrompt = `${prompt}
-
-以下はPDFから抽出したテキストです：
-
----
-${extractedText}
----
-
-上記のテキストを分析して、数式はLaTeX形式（$$...$$）で、表はMarkdownテーブル形式で、適切にMarkdownに変換してください。`;
-      
-      const response = await model.generateContent(fullPrompt);
-      const text = response.response.text();
-      return text;
+      const response = await this.ai.models.generateContent({
+        model: this.model,
+        contents: [{ text: 'Hello' }]
+      });
+      return !!response.text;
     } catch (error) {
-      console.error('コンテンツ生成エラー:', error);
-      throw new Error('コンテンツの生成に失敗しました');
-    }
-  }
-  
-  // 旧バージョン（互換性のため残す）
-  async generateContentFromFile(file: UploadedFile, prompt: string): Promise<string> {
-    // 現在は使用しない
-    throw new Error('このメソッドは廃止されました。generateContentを使用してください。');
-  }
-
-  // ファイル削除
-  async deleteFile(fileUri: string): Promise<void> {
-    try {
-      // 一時的な実装 - 実際のAPIでは適切な削除処理を行う
-      console.log('ファイル削除:', fileUri);
-    } catch (error) {
-      console.error('ファイル削除エラー:', error);
-      // ファイル削除の失敗は致命的ではないため、エラーをスローしない
+      console.error('Gemini API 接続テストエラー:', error);
+      return false;
     }
   }
 
-  // アップロードされたファイルの一覧取得
-  async listFiles(): Promise<UploadedFile[]> {
-    try {
-      // 一時的な実装 - 空の配列を返す
-      return [];
-    } catch (error) {
-      console.error('ファイル一覧取得エラー:', error);
-      throw new Error('ファイル一覧の取得に失敗しました');
-    }
-  }
-
-  // ファイル情報の取得
-  async getFile(fileUri: string): Promise<UploadedFile> {
-    try {
-      // 一時的な実装 - ダミーデータを返す
-      return {
-        uri: fileUri,
-        mimeType: 'application/pdf',
-        name: 'dummy.pdf',
-        sizeBytes: 0,
-        createTime: new Date().toISOString(),
-        updateTime: new Date().toISOString(),
-        expirationTime: new Date(Date.now() + 3600000).toISOString(),
-      };
-    } catch (error) {
-      console.error('ファイル情報取得エラー:', error);
-      throw new Error('ファイル情報の取得に失敗しました');
-    }
+  // 後方互換性のためのメソッド（廃止予定）
+  async generateContent(_extractedText: string, _prompt: string): Promise<string> {
+    console.warn('generateContent method is deprecated. Use generateContentFromPDF instead.');
+    // このメソッドは後方互換性のために残すが、新しいPDF処理は使用しない
+    throw new Error('このメソッドは廃止されました。generateContentFromPDFを使用してください。');
   }
 }

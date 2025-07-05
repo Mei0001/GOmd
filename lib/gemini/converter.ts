@@ -2,7 +2,6 @@ import { GeminiClient } from './client';
 import { getConversionPrompt } from './prompts';
 import { ConversionResult, ConversionOptions, ConversionMetadata } from '@/types';
 import { calculateProcessingTime } from '@/lib/utils';
-import { preparePDFForGemini } from '@/lib/pdf/simple-parser';
 
 export class GeminiConverter {
   private client: GeminiClient;
@@ -11,7 +10,7 @@ export class GeminiConverter {
     this.client = new GeminiClient(apiKey);
   }
 
-  // PDFをMarkdownに変換
+  // PDFをMarkdownに変換（Geminiネイティブ処理）
   async convert(
     file: File,
     options: ConversionOptions = {}
@@ -19,22 +18,24 @@ export class GeminiConverter {
     const startTime = new Date();
 
     try {
-      // 1. PDFからテキスト抽出
-      console.log('PDFからテキストを抽出中...');
-      const { extractedText, processedText, metadata: pdfMetadata } = await preparePDFForGemini(file);
-      
-      if (!extractedText || extractedText.trim().length === 0) {
-        throw new Error('PDFからテキストを抽出できませんでした');
-      }
-
-      console.log('抽出されたテキストの長さ:', extractedText.length);
+      // 1. PDFファイルをBufferに変換
+      console.log('PDFファイルをバッファに変換中...');
+      const arrayBuffer = await file.arrayBuffer();
+      const pdfBuffer = Buffer.from(arrayBuffer);
 
       // 2. プロンプトの準備
       const prompt = getConversionPrompt('default');
 
-      // 3. Geminiでテキストをマークダウンに変換
-      console.log('Geminiでマークダウンに変換中...');
-      const markdown = await this.client.generateContent(processedText, prompt);
+      // 3. GeminiでPDFを直接処理してMarkdownに変換
+      console.log('GeminiでPDFを直接処理中...');
+      let markdown: string;
+      
+      // ファイルサイズで処理方法を切り替え（20MB未満は直接処理、以上はFile API）
+      if (file.size < 20 * 1024 * 1024) {
+        markdown = await this.client.generateContentFromPDF(pdfBuffer, prompt);
+      } else {
+        markdown = await this.client.generateContentFromLargePDF(pdfBuffer, file.name, prompt);
+      }
 
       // 4. メタデータの作成
       const endTime = new Date();
@@ -73,18 +74,21 @@ export class GeminiConverter {
     const startTime = new Date();
 
     try {
-      // PDFからテキスト抽出（ストリーミングではないが、処理を開始）
-      const { extractedText, processedText } = await preparePDFForGemini(file);
-      
-      if (!extractedText || extractedText.trim().length === 0) {
-        throw new Error('PDFからテキストを抽出できませんでした');
-      }
+      // PDFファイルをBufferに変換
+      const arrayBuffer = await file.arrayBuffer();
+      const pdfBuffer = Buffer.from(arrayBuffer);
 
       // プロンプトの準備
       const prompt = getConversionPrompt('default');
 
-      // Geminiでマークダウンに変換（非ストリーミング）
-      const markdown = await this.client.generateContent(processedText, prompt);
+      // GeminiでPDFを直接処理してMarkdownに変換（非ストリーミング）
+      let markdown: string;
+      
+      if (file.size < 20 * 1024 * 1024) {
+        markdown = await this.client.generateContentFromPDF(pdfBuffer, prompt);
+      } else {
+        markdown = await this.client.generateContentFromLargePDF(pdfBuffer, file.name, prompt);
+      }
 
       // ストリームとして返す（一度に全部送信）
       const stream = new ReadableStream<string>({
@@ -114,16 +118,20 @@ export class GeminiConverter {
     const startTime = new Date();
 
     try {
-      // PDFからテキスト抽出
-      const { extractedText, processedText } = await preparePDFForGemini(file);
-      
-      if (!extractedText || extractedText.trim().length === 0) {
-        throw new Error('PDFからテキストを抽出できませんでした');
-      }
+      // PDFファイルをBufferに変換
+      const arrayBuffer = await file.arrayBuffer();
+      const pdfBuffer = Buffer.from(arrayBuffer);
 
       // 数式重点のプロンプトを使用
       const prompt = getConversionPrompt('math-focused');
-      const markdown = await this.client.generateContent(processedText, prompt);
+      
+      let markdown: string;
+      
+      if (file.size < 20 * 1024 * 1024) {
+        markdown = await this.client.generateContentFromPDF(pdfBuffer, prompt);
+      } else {
+        markdown = await this.client.generateContentFromLargePDF(pdfBuffer, file.name, prompt);
+      }
 
       const endTime = new Date();
       const metadata: ConversionMetadata = {

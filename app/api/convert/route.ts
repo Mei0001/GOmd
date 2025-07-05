@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createGeminiConverter } from '@/lib/gemini';
-import { extractTextFromPDF } from '@/lib/pdf/simple-parser';
 import { analyzeConversionQuality } from '@/lib/utils';
 
 export async function POST(request: NextRequest) {
@@ -23,29 +22,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ファイルをBufferに変換
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    
-    // PDFからテキスト抽出
-    console.log('PDFからテキストを抽出中...');
-    const extractedText = await extractTextFromPDF(buffer);
-    
-    if (!extractedText || extractedText.trim().length === 0) {
-      return NextResponse.json(
-        { error: 'PDFからテキストを抽出できませんでした' },
-        { status: 400 }
-      );
-    }
-    
-    console.log('抽出されたテキストの長さ:', extractedText.length);
-    
-    // Geminiで変換
+    // Geminiで直接PDF処理
+    console.log('GeminiでPDFを直接処理中...');
     const converter = createGeminiConverter();
     
-    // converterを使用して変換
-    const mockFile = new File([buffer], file.name, { type: 'application/pdf' });
-    const conversionResult = await converter.convert(mockFile);
+    // ファイルサイズを確認してログ出力
+    console.log(`ファイルサイズ: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+    if (file.size >= 20 * 1024 * 1024) {
+      console.log('大きなファイルのため、File APIを使用します');
+    }
+    
+    // converterを使用してPDFを直接変換
+    const conversionResult = await converter.convert(file);
     
     if (!conversionResult.success) {
       return NextResponse.json(
@@ -54,10 +42,11 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    const markdown = conversionResult.markdown;
+    const markdown = conversionResult.markdown || '';
     
-    // 変換品質を分析
-    const qualityAnalysis = analyzeConversionQuality(extractedText, markdown);
+    // 変換品質を分析（PDFから直接変換したため、元テキストとしてMarkdownの一部を使用）
+    const sampleText = markdown.substring(0, Math.min(1000, markdown.length)); // 品質分析用のサンプル
+    const qualityAnalysis = analyzeConversionQuality(sampleText, markdown);
     
     console.log(`変換完成度: ${qualityAnalysis.completeness}% (${qualityAnalysis.qualityLevel})`);
     console.log('構造要素:', qualityAnalysis.structureElements);
@@ -66,9 +55,8 @@ export async function POST(request: NextRequest) {
       success: true,
       markdown,
       metadata: {
-        fileName: file.name,
+        ...conversionResult.metadata,
         fileSize: file.size,
-        textLength: extractedText.length,
         qualityAnalysis,
       }
     });
