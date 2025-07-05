@@ -47,35 +47,57 @@
 
 ### 4. Gemini API統合
 - [x] lib/gemini/client.ts - Gemini APIクライアント
-  - [x] GoogleGenAI初期化
-  - [x] ファイルアップロード機能
-  - [x] コンテンツ生成機能
+  - [x] @google/genai SDKへの移行
+  - [x] gemini-2.5-proモデル使用
+  - [x] PDFネイティブ処理機能
+  - [x] File API対応（大容量ファイル）
 - [x] lib/gemini/prompts.ts - プロンプト定義
+  - [x] PDF直接処理用プロンプト最適化
+  - [x] インライン・ブロック数式対応
 - [x] lib/gemini/converter.ts - 変換ロジック
+  - [x] PDF直接処理への対応
 
-### 5. Server Actions実装
-- [x] app/actions/convert.ts
-  - [x] convertPdfToMarkdown関数
-  - [x] ファイルバリデーション
+### 5. API Routes実装
+- [x] app/api/convert/route.ts
+  - [x] PDF直接処理への移行
+  - [x] 変換品質分析機能
   - [x] エラーハンドリング
   - [x] レスポンス形式の定義
+  - [x] 複数ファイル対応
 
 ### 6. UIコンポーネント実装
 - [x] components/features/FileUploader.tsx
   - [x] ドラッグ&ドロップ対応
   - [x] ファイル選択UI
   - [x] アップロード状態管理
+  - [x] API Route連携対応
+  - [x] PDFプレビュー統合
 - [x] components/features/ConversionProgress.tsx
   - [x] 進捗バー表示
   - [x] ステータステキスト
+  - [x] 詳細ログ表示機能
 - [x] components/features/MarkdownPreview.tsx
   - [x] Markdown表示
   - [x] 数式レンダリング（KaTeX）
+  - [x] 変換品質表示機能
+  - [x] 統計情報表示
+- [x] components/features/PDFPreview.tsx
+  - [x] PDF表示機能
+  - [x] ページナビゲーション
+  - [x] ズーム・回転機能
+  - [x] 動的インポート対応（SSR回避）
+- [x] components/features/MultipleFileUploader.tsx
+  - [x] 複数ファイルアップロード
+  - [x] 並列処理（最大3ファイル同時）
+  - [x] 詳細な進捗ログ
+  - [x] 個別・一括ダウンロード機能
 
 ### 7. メインページ実装
 - [x] app/page.tsx - ホームページ
   - [x] レイアウト構成
   - [x] コンポーネント統合
+  - [x] 単一・複数ファイルモード切り替え
+  - [x] タブ式UI実装
 - [x] app/layout.tsx - ルートレイアウト
   - [x] メタデータ設定
   - [x] グローバルスタイル
@@ -85,6 +107,9 @@
 - [x] PDF変換動作確認
 - [x] ダウンロード機能確認
 - [x] エラーハンドリング確認
+- [x] PDFプレビュー機能確認
+- [x] 複数ファイル処理確認
+- [x] 変換品質表示確認
 
 ## 🚀 機能拡張（Phase 2）
 

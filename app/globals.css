@@ -74,3 +74,76 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* 数式表示の改善 */
+@layer components {
+  .math-preview {
+    /* インライン数式の調整 */
+    .katex {
+      font-size: 1em;
+      line-height: 1.4;
+    }
+    
+    /* インライン数式を文章に自然に配置 */
+    .katex-inline {
+      display: inline;
+      vertical-align: baseline;
+      margin: 0 0.1em;
+    }
+    
+    /* ブロック数式の調整 */
+    .katex-display {
+      display: block;
+      margin: 1em 0;
+      text-align: center;
+      overflow-x: auto;
+    }
+    
+    /* 数式ブロックの背景を削除して自然な表示に */
+    .math-display {
+      background: transparent;
+      border: none;
+      padding: 0;
+      margin: 1em 0;
+    }
+    
+    /* 長い数式の横スクロール対応 */
+    .katex-display > .katex {
+      white-space: nowrap;
+      overflow-x: auto;
+      overflow-y: hidden;
+      max-width: 100%;
+    }
+    
+    /* 文章の改行を保持 */
+    p {
+      white-space: pre-wrap;
+      line-height: 1.6;
+      margin-bottom: 1em;
+    }
+    
+    /* 数式のフォントサイズを本文に合わせる */
+    .katex .sizing {
+      font-size: inherit;
+    }
+    
+    /* 数式の改行を自然に */
+    .katex-display .katex {
+      line-height: 1.2;
+    }
+    
+    /* 数式内の改行を保持 */
+    .katex-display .katex .mspace {
+      margin-right: 0.5em;
+    }
+    
+    /* 数式と文章の間隔を調整 */
+    p + .katex-display {
+      margin-top: 0.5em;
+    }
+    
+    .katex-display + p {
+      margin-top: 0.5em;
+    }
+  }
+}

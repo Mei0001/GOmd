@@ -2,22 +2,23 @@
 
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, File, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { Upload, File, X, CheckCircle, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { validateFile, formatFileSize } from '@/lib/validations/file';
 import { FileUploadState, ConversionResult } from '@/types';
-import { convertPdfToMarkdown } from '@/app/actions/convert';
+import { PDFPreview } from './PDFPreview';
 
 interface FileUploaderProps {
   onUploadComplete?: (result: ConversionResult) => void;
   onError?: (error: string) => void;
   disabled?: boolean;
+  showPreview?: boolean;
 }
 
-export function FileUploader({ onUploadComplete, onError, disabled = false }: FileUploaderProps) {
+export function FileUploader({ onUploadComplete, onError, disabled = false, showPreview = true }: FileUploaderProps) {
   const [uploadState, setUploadState] = useState<FileUploadState>({
     file: null,
     status: 'idle',
@@ -25,6 +26,7 @@ export function FileUploader({ onUploadComplete, onError, disabled = false }: Fi
     result: null,
     error: null,
   });
+  const [showPDFPreview, setShowPDFPreview] = useState(false);
 
   // ファイルドロップ処理
   const onDrop = useCallback(
@@ -162,9 +164,10 @@ export function FileUploader({ onUploadComplete, onError, disabled = false }: Fi
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto space-y-4">
-      <Card>
-        <CardContent className="p-6">
+    <div className="w-full max-w-4xl mx-auto space-y-4">
+      <div className={cn("grid gap-4", uploadState.file && showPreview ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1")}>
+        <Card>
+          <CardContent className="p-6">
           {/* ドロップゾーン */}
           <div
             {...getRootProps()}
@@ -216,7 +219,7 @@ export function FileUploader({ onUploadComplete, onError, disabled = false }: Fi
 
           {/* アクションボタン */}
           {(uploadState.status === 'error' || uploadState.status === 'completed') && (
-            <div className="flex justify-center mt-4">
+            <div className="flex justify-center space-x-2 mt-4">
               <Button
                 variant="outline"
                 onClick={handleReset}
@@ -225,6 +228,17 @@ export function FileUploader({ onUploadComplete, onError, disabled = false }: Fi
                 <X className="h-4 w-4" />
                 <span>リセット</span>
               </Button>
+              
+              {uploadState.file && showPreview && (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowPDFPreview(!showPDFPreview)}
+                  className="flex items-center space-x-2"
+                >
+                  {showPDFPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  <span>{showPDFPreview ? 'プレビュー非表示' : 'PDFプレビュー'}</span>
+                </Button>
+              )}
             </div>
           )}
 
@@ -245,6 +259,12 @@ export function FileUploader({ onUploadComplete, onError, disabled = false }: Fi
           )}
         </CardContent>
       </Card>
+
+      {/* PDFプレビュー */}
+      {uploadState.file && showPreview && showPDFPreview && (
+        <PDFPreview file={uploadState.file} />
+      )}
+    </div>
     </div>
   );
 }

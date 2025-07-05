@@ -140,7 +140,7 @@ export function MarkdownPreview({ markdown, fileName, metadata }: MarkdownPrevie
         <CardContent>
           {isPreviewMode ? (
             // プレビューモード
-            <div className="prose prose-slate max-w-none">
+            <div className="prose prose-slate max-w-none math-preview">
               <ReactMarkdown
                 remarkPlugins={[remarkMath]}
                 rehypePlugins={[rehypeKatex]}

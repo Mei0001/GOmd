@@ -1,14 +1,19 @@
 'use client';
 
 import React, { useState } from 'react';
-import { FileUploader, MarkdownPreview } from '@/components/features';
+import { FileUploader, MarkdownPreview, MultipleFileUploader } from '@/components/features';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { ConversionResult } from '@/types';
-import { Calculator, FileText, Zap, Download } from 'lucide-react';
+import { Calculator, FileText, Zap, Download, Upload, Files } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+type UploadMode = 'single' | 'multiple';
 
 export default function HomePage() {
   const [conversionResult, setConversionResult] = useState<ConversionResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [uploadMode, setUploadMode] = useState<UploadMode>('single');
 
   // アップロード完了時の処理
   const handleUploadComplete = (result: ConversionResult) => {
@@ -20,6 +25,16 @@ export default function HomePage() {
   const handleError = (errorMessage: string) => {
     setError(errorMessage);
     setConversionResult(null);
+  };
+
+  // 複数ファイル処理完了時の処理
+  const handleMultipleFilesProcessed = (results: any[]) => {
+    console.log('複数ファイル処理完了:', results);
+    // 最初の完了したファイルの結果を表示（デモ用）
+    if (results.length > 0 && results[0].result) {
+      setConversionResult(results[0].result);
+      setError(null);
+    }
   };
 
   return (
@@ -95,10 +110,48 @@ export default function HomePage() {
           </p>
         </div>
 
-        <FileUploader
-          onUploadComplete={handleUploadComplete}
-          onError={handleError}
-        />
+        {/* アップロードモード切り替え */}
+        <div className="flex justify-center">
+          <div className="flex items-center space-x-1 bg-muted p-1 rounded-lg">
+            <Button
+              variant={uploadMode === 'single' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setUploadMode('single')}
+              className={cn(
+                "flex items-center space-x-2",
+                uploadMode === 'single' && "bg-background shadow-sm"
+              )}
+            >
+              <Upload className="h-4 w-4" />
+              <span>単一ファイル</span>
+            </Button>
+            <Button
+              variant={uploadMode === 'multiple' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setUploadMode('multiple')}
+              className={cn(
+                "flex items-center space-x-2",
+                uploadMode === 'multiple' && "bg-background shadow-sm"
+              )}
+            >
+              <Files className="h-4 w-4" />
+              <span>複数ファイル</span>
+            </Button>
+          </div>
+        </div>
+
+        {/* アップロードコンポーネント */}
+        {uploadMode === 'single' ? (
+          <FileUploader
+            onUploadComplete={handleUploadComplete}
+            onError={handleError}
+          />
+        ) : (
+          <MultipleFileUploader
+            onFilesProcessed={handleMultipleFilesProcessed}
+            maxFiles={10}
+          />
+        )}
       </div>
 
       {/* 変換結果表示 */}
