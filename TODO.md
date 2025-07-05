@@ -114,18 +114,18 @@
 ## 🚀 機能拡張（Phase 2）
 
 ### 9. ストリーミング対応
-- [ ] app/api/convert/stream/route.ts
-  - [ ] Edge Runtime設定
-  - [ ] ストリーミングレスポンス実装
-  - [ ] Server-Sent Events対応
-- [ ] components/features/StreamingUploader.tsx
-  - [ ] リアルタイム表示
-  - [ ] ストリーミング状態管理
+- [x] app/api/convert/stream/route.ts
+  - [x] Edge Runtime設定
+  - [x] ストリーミングレスポンス実装
+  - [x] Server-Sent Events対応
+- [x] components/features/StreamingUploader.tsx
+  - [x] リアルタイム表示
+  - [x] ストリーミング状態管理
 
 ### 10. エラーハンドリング強化
-- [ ] lib/error-handler.ts - エラーハンドリングユーティリティ
-- [ ] components/ui/ErrorBoundary.tsx - エラー境界
-- [ ] トースト通知の実装
+- [x] lib/error-handler.ts - エラーハンドリングユーティリティ
+- [x] components/ui/ErrorBoundary.tsx - エラー境界
+- [x] トースト通知の実装
 
 ### 11. パフォーマンス最適化
 - [ ] lib/rate-limiter.ts - レート制限実装
