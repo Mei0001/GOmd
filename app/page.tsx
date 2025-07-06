@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { FileUploader, MarkdownPreview, MultipleFileUploader } from '@/components/features';
+import { FileUploader, MarkdownPreview, MultipleFileUploader, EnhancedMultipleFileUploader } from '@/components/features';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ConversionResult } from '@/types';
+import { ConversionResult, BatchConversionResult } from '@/types';
 import { Calculator, FileText, Zap, Download, Upload, Files } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { 
@@ -15,7 +15,7 @@ import {
   PageTransition 
 } from '@/components/ui/animations';
 
-type UploadMode = 'single' | 'multiple';
+type UploadMode = 'single' | 'multiple' | 'enhanced';
 
 
 export default function HomePage() {
@@ -148,7 +148,7 @@ export default function HomePage() {
 
         {/* アップロードモード切り替え */}
         <div className="flex justify-center px-4">
-          <div className="flex items-center space-x-1 bg-muted p-1 rounded-lg w-full max-w-md sm:w-auto">
+          <div className="flex items-center space-x-1 bg-muted p-1 rounded-lg w-full max-w-lg sm:w-auto">
             <Button
               variant={uploadMode === 'single' ? 'default' : 'ghost'}
               size="sm"
@@ -175,6 +175,19 @@ export default function HomePage() {
               <span className="hidden xs:inline">複数ファイル</span>
               <span className="xs:hidden">複数</span>
             </Button>
+            <Button
+              variant={uploadMode === 'enhanced' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setUploadMode('enhanced')}
+              className={cn(
+                "flex items-center space-x-2 flex-1 sm:flex-none",
+                uploadMode === 'enhanced' && "bg-background shadow-sm"
+              )}
+            >
+              <Zap className="h-4 w-4" />
+              <span className="hidden xs:inline">高速処理</span>
+              <span className="xs:hidden">高速</span>
+            </Button>
           </div>
         </div>
 
@@ -184,10 +197,17 @@ export default function HomePage() {
               onUploadComplete={handleUploadComplete}
               onError={handleError}
             />
-          ) : (
+          ) : uploadMode === 'multiple' ? (
             <MultipleFileUploader
               onFilesProcessed={handleMultipleFilesProcessed}
               maxFiles={10}
+            />
+          ) : (
+            <EnhancedMultipleFileUploader
+              onFilesProcessed={handleMultipleFilesProcessed}
+              maxFiles={50}
+              maxConcurrent={10}
+              useOptimizedMode={true}
             />
           )}
         </FadeInWhenVisible>
@@ -206,7 +226,12 @@ export default function HomePage() {
           <MarkdownPreview
             markdown={conversionResult.markdown}
             fileName={conversionResult.metadata?.fileName || 'document.pdf'}
-            metadata={conversionResult.metadata}
+            metadata={conversionResult.metadata ? {
+              pageCount: conversionResult.metadata.pageCount || conversionResult.metadata.totalPages || 0,
+              processingTime: conversionResult.metadata.processingTime,
+              extractedAt: conversionResult.metadata.extractedAt,
+              qualityAnalysis: conversionResult.metadata.qualityAnalysis,
+            } : undefined}
           />
         </div>
       )}
@@ -234,7 +259,12 @@ export default function HomePage() {
                     <MarkdownPreview
                       markdown={result.markdown}
                       fileName={result.metadata?.fileName || `file-${index + 1}.pdf`}
-                      metadata={result.metadata}
+                      metadata={result.metadata ? {
+                        pageCount: result.metadata.pageCount || result.metadata.totalPages || 0,
+                        processingTime: result.metadata.processingTime,
+                        extractedAt: result.metadata.extractedAt,
+                        qualityAnalysis: result.metadata.qualityAnalysis,
+                      } : undefined}
                     />
                   </CardContent>
                 </Card>

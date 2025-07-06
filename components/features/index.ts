@@ -4,4 +4,4 @@ export { MultipleFileUploader } from './MultipleFileUploader';
 export { ConversionProgress } from './ConversionProgress';
 export { MarkdownPreview } from './MarkdownPreview';
 export { PDFPreview } from './PDFPreview';
-export { MultipleFileUploader } from './MultipleFileUploader';
+export { EnhancedMultipleFileUploader } from './EnhancedMultipleFileUploader';

@@ -17,9 +17,15 @@ export interface BatchConversionResult {
 // 変換メタデータ
 export interface ConversionMetadata {
   fileName: string;
-  pageCount: number;
+  fileSize?: number;
+  pageCount?: number;
+  totalPages?: number;
   processingTime: number;
   extractedAt: Date;
+  title?: string;
+  hasImages?: boolean;
+  hasFormulas?: boolean;
+  hasTables?: boolean;
   qualityAnalysis?: {
     completeness: number;
     mathElementsCount: number;

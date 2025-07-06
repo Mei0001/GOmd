@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createGeminiConverter } from '@/lib/gemini';
+import { OptimizedGeminiConverter } from '@/lib/gemini/optimized-converter';
 import { analyzeConversionQuality } from '@/lib/utils';
 import { rateLimiters, withRateLimit } from '@/lib/rate-limiter';
 import { caches, cacheUtils } from '@/lib/cache';
@@ -8,6 +9,7 @@ import { processFileWithMemoryControl } from '@/lib/memory-optimizer';
 async function handleConversion(request: NextRequest) {
   const formData = await request.formData();
   const file = formData.get('file') as File;
+  const optimized = formData.get('optimized') === 'true';
   
   if (!file) {
     return NextResponse.json(
@@ -57,15 +59,28 @@ async function handleConversion(request: NextRequest) {
   return await processFileWithMemoryControl(
     file,
     async (buffer) => {
-      console.log('GeminiでPDFを直接処理中...');
-      const converter = createGeminiConverter();
+      console.log(optimized ? '最適化GeminiでPDFを高速処理中...' : 'GeminiでPDFを直接処理中...');
+      
+      let conversionResult;
+      
+      if (optimized) {
+        // 最適化コンバーターを使用
+        const optimizedConverter = new OptimizedGeminiConverter(process.env.GEMINI_API_KEY!);
+        conversionResult = await optimizedConverter.convertOptimized(file, {
+          useFlashModel: true,
+          enableStreaming: true,
+          batchProcessing: file.size > 10 * 1024 * 1024, // 10MB以上でバッチ処理
+        });
+      } else {
+        // 通常のコンバーターを使用
+        const converter = createGeminiConverter();
+        conversionResult = await converter.convert(file);
+      }
       
       console.log(`ファイルサイズ: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
       if (file.size >= 20 * 1024 * 1024) {
         console.log('大きなファイルのため、File APIを使用します');
       }
-      
-      const conversionResult = await converter.convert(file);
       
       if (!conversionResult.success) {
         return NextResponse.json(
