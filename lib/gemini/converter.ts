@@ -10,7 +10,7 @@ export class GeminiConverter {
     this.client = new GeminiClient(apiKey);
   }
 
-  // PDFをMarkdownに変換（Geminiネイティブ処理）
+  // ファイルをMarkdownに変換（PDFと画像に対応）
   async convert(
     file: File,
     options: ConversionOptions = {}
@@ -18,39 +18,14 @@ export class GeminiConverter {
     const startTime = new Date();
 
     try {
-      // 1. PDFファイルをBufferに変換
-      console.log('PDFファイルをバッファに変換中...');
-      const arrayBuffer = await file.arrayBuffer();
-      const pdfBuffer = Buffer.from(arrayBuffer);
-
-      // 2. プロンプトの準備
-      const prompt = getConversionPrompt('default');
-
-      // 3. GeminiでPDFを直接処理してMarkdownに変換
-      console.log('GeminiでPDFを直接処理中...');
-      let markdown: string;
-      
-      // ファイルサイズで処理方法を切り替え（20MB未満は直接処理、以上はFile API）
-      if (file.size < 20 * 1024 * 1024) {
-        markdown = await this.client.generateContentFromPDF(pdfBuffer, prompt);
+      // ファイルタイプに応じて処理を分岐
+      if (file.type === 'application/pdf') {
+        return await this.convertPDF(file, options, startTime);
+      } else if (file.type.startsWith('image/')) {
+        return await this.convertImage(file, options, startTime);
       } else {
-        markdown = await this.client.generateContentFromLargePDF(pdfBuffer, file.name, prompt);
+        throw new Error('サポートされていないファイル形式です');
       }
-
-      // 4. メタデータの作成
-      const endTime = new Date();
-      const metadata: ConversionMetadata = {
-        fileName: file.name,
-        pageCount: await this.estimatePageCount(markdown),
-        processingTime: calculateProcessingTime(startTime, endTime),
-        extractedAt: endTime,
-      };
-
-      return {
-        success: true,
-        markdown,
-        metadata,
-      };
     } catch (error) {
       console.error('変換エラー:', error);
       return {
@@ -61,6 +36,93 @@ export class GeminiConverter {
         },
       };
     }
+  }
+
+  // PDFをMarkdownに変換（Geminiネイティブ処理）
+  private async convertPDF(
+    file: File,
+    options: ConversionOptions,
+    startTime: Date
+  ): Promise<ConversionResult> {
+    // 1. PDFファイルをBufferに変換
+    console.log('PDFファイルをバッファに変換中...');
+    const arrayBuffer = await file.arrayBuffer();
+    const pdfBuffer = Buffer.from(arrayBuffer);
+
+    // 2. プロンプトの準備
+    const prompt = getConversionPrompt('default');
+
+    // 3. GeminiでPDFを直接処理してMarkdownに変換
+    console.log('GeminiでPDFを直接処理中...');
+    let markdown: string;
+    
+    // ファイルサイズで処理方法を切り替え（20MB未満は直接処理、以上はFile API）
+    if (file.size < 20 * 1024 * 1024) {
+      markdown = await this.client.generateContentFromPDF(pdfBuffer, prompt);
+    } else {
+      markdown = await this.client.generateContentFromLargePDF(pdfBuffer, file.name, prompt);
+    }
+
+    // 4. メタデータの作成
+    const endTime = new Date();
+    const metadata: ConversionMetadata = {
+      fileName: file.name,
+      pageCount: await this.estimatePageCount(markdown),
+      processingTime: calculateProcessingTime(startTime, endTime),
+      extractedAt: endTime,
+    };
+
+    return {
+      success: true,
+      markdown,
+      metadata,
+    };
+  }
+
+  // 画像をMarkdownに変換
+  private async convertImage(
+    file: File,
+    options: ConversionOptions,
+    startTime: Date
+  ): Promise<ConversionResult> {
+    // 1. 画像ファイルをBufferに変換
+    console.log('画像ファイルをバッファに変換中...');
+    const arrayBuffer = await file.arrayBuffer();
+    const imageBuffer = Buffer.from(arrayBuffer);
+
+    // 2. 画像解析プロンプトの準備
+    const prompt = `この画像を詳しく分析して、以下の形式でMarkdownに変換してください：
+
+1. 画像の内容を詳細に説明
+2. テキストが含まれている場合は、そのテキストを正確に抽出
+3. 数式が含まれている場合は、LaTeX形式（$$...$$）で記述
+4. 図表やグラフがある場合は、その内容を構造化して説明
+5. 画像のタイトルや説明を適切に付与
+
+以下の形式で出力してください：
+- 画像の説明は自然な文章で記述
+- 数式は$$...$$で囲む
+- 表がある場合はMarkdownテーブル形式で記述
+- 見出しレベルは適切に設定`;
+
+    // 3. GeminiでImageを直接処理してMarkdownに変換
+    console.log('Geminiで画像を直接処理中...');
+    const markdown = await this.client.generateContentFromImage(imageBuffer, file.type, prompt);
+
+    // 4. メタデータの作成
+    const endTime = new Date();
+    const metadata: ConversionMetadata = {
+      fileName: file.name,
+      pageCount: 1, // 画像は常に1ページ
+      processingTime: calculateProcessingTime(startTime, endTime),
+      extractedAt: endTime,
+    };
+
+    return {
+      success: true,
+      markdown,
+      metadata,
+    };
   }
 
   // ストリーミング変換（現在は非ストリーミングと同じ処理）
@@ -170,7 +232,17 @@ export class GeminiConverter {
   async canConvert(file: File): Promise<boolean> {
     try {
       // ファイルタイプのチェック
-      if (file.type !== 'application/pdf') {
+      const supportedTypes = [
+        'application/pdf',
+        'image/jpeg',
+        'image/jpg',
+        'image/png',
+        'image/gif',
+        'image/bmp',
+        'image/webp'
+      ];
+      
+      if (supportedTypes.indexOf(file.type) === -1) {
         return false;
       }
 

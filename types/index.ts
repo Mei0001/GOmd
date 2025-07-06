@@ -6,6 +6,14 @@ export interface ConversionResult {
   error?: ConversionError;
 }
 
+// 複数ファイル変換結果の型定義
+export interface BatchConversionResult {
+  success: boolean;
+  results: ConversionResult[];
+  metadata?: BatchConversionMetadata;
+  error?: ConversionError;
+}
+
 // 変換メタデータ
 export interface ConversionMetadata {
   fileName: string;
@@ -24,6 +32,15 @@ export interface ConversionMetadata {
     };
     qualityLevel: 'excellent' | 'good' | 'fair' | 'poor';
   };
+}
+
+// バッチ変換メタデータ
+export interface BatchConversionMetadata {
+  totalFiles: number;
+  successfulFiles: number;
+  failedFiles: number;
+  totalProcessingTime: number;
+  processedAt: Date;
 }
 
 // 変換オプション
@@ -74,6 +91,24 @@ export type UploadStatus = 'idle' | 'uploading' | 'processing' | 'completed' | '
 // ファイルアップロード状態管理
 export interface FileUploadState {
   file: File | null;
+  status: UploadStatus;
+  progress: number;
+  result: ConversionResult | null;
+  error: string | null;
+}
+
+// 複数ファイルアップロード状態管理
+export interface MultipleFileUploadState {
+  files: File[];
+  status: UploadStatus;
+  progress: number;
+  results: ConversionResult[];
+  errors: string[];
+}
+
+// 個別ファイルアップロード状態
+export interface FileUploadItem {
+  file: File;
   status: UploadStatus;
   progress: number;
   result: ConversionResult | null;

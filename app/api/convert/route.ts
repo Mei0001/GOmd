@@ -15,9 +15,19 @@ export async function POST(request: NextRequest) {
     }
 
     // ファイル検証
-    if (file.type !== 'application/pdf') {
+    const allowedTypes = [
+      'application/pdf',
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/gif',
+      'image/bmp',
+      'image/webp'
+    ];
+    
+    if (allowedTypes.indexOf(file.type) === -1) {
       return NextResponse.json(
-        { error: 'PDFファイルのみアップロード可能です' },
+        { error: 'PDFまたは画像ファイル（JPG、PNG、GIF、BMP、WEBP）のみアップロード可能です' },
         { status: 400 }
       );
     }
