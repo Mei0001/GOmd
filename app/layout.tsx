@@ -1,13 +1,16 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
+import { Toaster } from '@/components/ui/toaster';
+import { ThemeProvider } from '@/components/theme/ThemeProvider';
+import { ThemeToggle } from '@/components/theme/ThemeToggle';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'math-md - PDF to Markdown Converter',
   description: '数学コンテンツに特化したPDF→Markdown変換Webアプリケーション。Gemini APIを使用して、PDFから数式・表・画像を含むコンテンツを抽出し、整形されたMarkdownファイルとして出力します。',
-  keywords: ['PDF', 'Markdown', '数式', 'LaTeX', '変換', 'Gemini API'],
+  keywords: ['PDF', 'Markdown', '数式', 'LaTeX', '変換', 'Gemini API', 'アクセシビリティ'],
   authors: [{ name: 'math-md' }],
   viewport: 'width=device-width, initial-scale=1',
   robots: 'index, follow',
@@ -25,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ja">
+    <html lang="ja" suppressHydrationWarning>
       <head>
         {/* KaTeX CSS */}
         <link
@@ -36,36 +39,51 @@ export default function RootLayout({
         />
       </head>
       <body className={inter.className}>
-        <div className="min-h-screen bg-background">
-          {/* ヘッダー */}
-          <header className="border-b">
-            <div className="container mx-auto px-4 py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <h1 className="text-2xl font-bold text-primary">
-                    math-md
-                  </h1>
-                  <span className="text-sm text-muted-foreground">
-                    PDF to Markdown Converter
-                  </span>
-                </div>
-                
-                <div className="flex items-center space-x-4">
-                  <span className="text-xs text-muted-foreground">
-                    Powered by Gemini AI
-                  </span>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <div className="min-h-screen bg-background">
+            {/* Skip to main content link */}
+            <a 
+              href="#main-content" 
+              className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-primary text-primary-foreground px-4 py-2 rounded-md z-50 focus:outline-none focus:ring-2 focus:ring-primary-foreground"
+            >
+              メインコンテンツにスキップ
+            </a>
+
+            {/* ヘッダー */}
+            <header className="border-b" role="banner">
+              <div className="container mx-auto px-4 py-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <h1 className="text-2xl font-bold text-primary">
+                      math-md
+                    </h1>
+                    <span className="text-sm text-muted-foreground" aria-label="アプリケーションの説明">
+                      PDF to Markdown Converter
+                    </span>
+                  </div>
+                  
+                  <nav className="flex items-center space-x-4" role="navigation" aria-label="ユーティリティナビゲーション">
+                    <span className="text-xs text-muted-foreground" aria-label="技術情報">
+                      Powered by Gemini AI
+                    </span>
+                    <ThemeToggle />
+                  </nav>
                 </div>
               </div>
-            </div>
-          </header>
+            </header>
 
-          {/* メインコンテンツ */}
-          <main className="container mx-auto px-4 py-8">
-            {children}
-          </main>
+            {/* メインコンテンツ */}
+            <main id="main-content" className="container mx-auto px-4 py-8" role="main" tabIndex={-1}>
+              {children}
+            </main>
 
-          {/* フッター */}
-          <footer className="border-t mt-16">
+            {/* フッター */}
+            <footer className="border-t mt-16" role="contentinfo">
             <div className="container mx-auto px-4 py-8">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div>
@@ -102,7 +120,9 @@ export default function RootLayout({
               </div>
             </div>
           </footer>
-        </div>
+          </div>
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

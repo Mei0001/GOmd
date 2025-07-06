@@ -2,311 +2,374 @@
 
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, File, X, CheckCircle, AlertCircle, Image, FileText, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { Upload, FileText, X, Download, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { validateFile, formatFileSize } from '@/lib/validations/file';
-import { FileUploadItem, BatchConversionResult } from '@/types';
+
+interface FileWithProgress {
+  file: File;
+  id: string;
+  status: 'pending' | 'uploading' | 'processing' | 'completed' | 'error';
+  progress: number;
+  result?: {
+    markdown: string;
+    metadata: any;
+  };
+  error?: string;
+  logs: string[];
+}
 
 interface MultipleFileUploaderProps {
-  onUploadComplete?: (result: BatchConversionResult) => void;
-  onError?: (error: string) => void;
-  disabled?: boolean;
+  onFilesProcessed?: (results: FileWithProgress[]) => void;
   maxFiles?: number;
+  className?: string;
 }
 
 export function MultipleFileUploader({ 
-  onUploadComplete, 
-  onError, 
-  disabled = false,
-  maxFiles = 10
+  onFilesProcessed, 
+  maxFiles = 10,
+  className 
 }: MultipleFileUploaderProps) {
-  const [fileItems, setFileItems] = useState<FileUploadItem[]>([]);
+  const [files, setFiles] = useState<FileWithProgress[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [overallProgress, setOverallProgress] = useState(0);
 
-  // ファイルドロップ処理
-  const onDrop = useCallback(
-    (acceptedFiles: File[]) => {
-      if (disabled || isProcessing) return;
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    const newFiles: FileWithProgress[] = acceptedFiles.map(file => ({
+      file,
+      id: Math.random().toString(36).substr(2, 9),
+      status: 'pending' as const,
+      progress: 0,
+      logs: [`ファイル追加: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`]
+    }));
 
-      const newFiles = acceptedFiles.slice(0, maxFiles - fileItems.length);
-      const newFileItems: FileUploadItem[] = newFiles.map(file => ({
-        file,
-        status: 'idle',
-        progress: 0,
-        result: null,
-        error: null,
-      }));
+    setFiles(prev => [...prev, ...newFiles].slice(0, maxFiles));
+  }, [maxFiles]);
 
-      setFileItems((prev: FileUploadItem[]) => [...prev, ...newFileItems]);
-    },
-    [disabled, isProcessing, maxFiles, fileItems.length]
-  );
-
-  // react-dropzoneの設定
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'application/pdf': ['.pdf'],
-      'image/*': ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
+      'application/pdf': ['.pdf']
     },
-    maxFiles: maxFiles - fileItems.length,
-    disabled: disabled || isProcessing,
+    multiple: true,
+    maxFiles,
+    disabled: isProcessing
   });
 
-  // 個別ファイルの削除
-  const removeFile = (index: number) => {
-    setFileItems((prev: FileUploadItem[]) => prev.filter((_, i) => i !== index));
+  const removeFile = (id: string) => {
+    setFiles(prev => prev.filter(f => f.id !== id));
   };
 
-  // 全ファイルクリア
-  const clearAllFiles = () => {
-    setFileItems([]);
+  const addLog = (id: string, message: string) => {
+    setFiles(prev => prev.map(f => 
+      f.id === id 
+        ? { ...f, logs: [...f.logs, `${new Date().toLocaleTimeString()}: ${message}`] }
+        : f
+    ));
   };
 
-  // バッチ処理開始
-  const startBatchProcessing = async () => {
-    if (fileItems.length === 0) return;
+  const updateFileStatus = (id: string, status: FileWithProgress['status'], progress?: number) => {
+    setFiles(prev => prev.map(f => 
+      f.id === id 
+        ? { ...f, status, progress: progress ?? f.progress }
+        : f
+    ));
+  };
 
-    setIsProcessing(true);
-    setOverallProgress(0);
-
-    // すべてのファイルを処理中に設定
-    setFileItems((prev: FileUploadItem[]) => prev.map((item: FileUploadItem) => ({
-      ...item,
-      status: 'processing' as const,
-      progress: 0
-    })));
-
+  const processFile = async (fileData: FileWithProgress): Promise<void> => {
+    const { file, id } = fileData;
+    
     try {
-      // FormDataの作成
+      updateFileStatus(id, 'uploading', 10);
+      addLog(id, 'アップロード開始');
+
       const formData = new FormData();
-      
-      // 各ファイルをFormDataに追加
-      fileItems.forEach(item => {
-        formData.append('files', item.file);
-      });
+      formData.append('file', file);
 
-      // 進捗更新
-      setOverallProgress(25);
+      updateFileStatus(id, 'uploading', 30);
+      addLog(id, 'サーバーに送信中...');
 
-      // バッチAPI呼び出し
-      const response = await fetch('/api/convert/batch', {
+      const response = await fetch('/api/convert', {
+
         method: 'POST',
         body: formData,
       });
 
-      const batchResult = await response.json();
+      updateFileStatus(id, 'processing', 50);
+      addLog(id, 'PDF解析中...');
 
-      // 進捗更新
-      setOverallProgress(75);
-
-      if (response.ok && batchResult.success) {
-        // 成功した場合、各ファイルの結果を更新
-        const results = batchResult.results || [];
-        
-        setFileItems((prev: FileUploadItem[]) => prev.map((item: FileUploadItem, index: number) => {
-          const result = results[index];
-          if (result && result.success) {
-            return {
-              ...item,
-              status: 'completed',
-              progress: 100,
-              result,
-              error: null
-            };
-          } else {
-            return {
-              ...item,
-              status: 'error',
-              progress: 0,
-              error: result?.error?.message || '変換に失敗しました'
-            };
-          }
-        }));
-
-        setOverallProgress(100);
-        onUploadComplete?.(batchResult);
-      } else {
-        // エラーの場合
-        const errorMessage = batchResult.error || 'バッチ処理に失敗しました';
-        setFileItems((prev: FileUploadItem[]) => prev.map((item: FileUploadItem) => ({
-          ...item,
-          status: 'error',
-          progress: 0,
-          error: errorMessage
-        })));
-        onError?.(errorMessage);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '変換に失敗しました');
       }
+
+      updateFileStatus(id, 'processing', 80);
+      addLog(id, 'Markdownに変換中...');
+
+      const result = await response.json();
+
+      updateFileStatus(id, 'processing', 95);
+      addLog(id, '変換完了処理中...');
+
+      // 結果を保存
+      setFiles(prev => prev.map(f => 
+        f.id === id 
+          ? { 
+              ...f, 
+              status: 'completed', 
+              progress: 100, 
+              result: result 
+            }
+          : f
+      ));
+
+      addLog(id, `変換完了 (品質: ${result.metadata?.qualityAnalysis?.completeness || 'N/A'}%)`);
+
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '予期しないエラーが発生しました';
-      setFileItems((prev: FileUploadItem[]) => prev.map((item: FileUploadItem) => ({
-        ...item,
-        status: 'error',
-        progress: 0,
-        error: errorMessage
-      })));
-      onError?.(errorMessage);
-    } finally {
-      setIsProcessing(false);
+      console.error(`ファイル ${file.name} の変換エラー:`, error);
+      setFiles(prev => prev.map(f => 
+        f.id === id 
+          ? { 
+              ...f, 
+              status: 'error', 
+              error: error instanceof Error ? error.message : '不明なエラー'
+            }
+          : f
+      ));
+      addLog(id, `エラー: ${error instanceof Error ? error.message : '不明なエラー'}`);
     }
   };
 
-  // ファイルアイコンの取得
-  const getFileIcon = (file: File) => {
-    if (file.type === 'application/pdf') {
-      return <FileText className="h-5 w-5 text-red-500" />;
-    } else if (file.type.startsWith('image/')) {
-      return <Image className="h-5 w-5 text-blue-500" />;
+  const processAllFiles = async () => {
+    setIsProcessing(true);
+    
+    const pendingFiles = files.filter(f => f.status === 'pending');
+    addLog('system', `${pendingFiles.length}個のファイルの処理を開始`);
+
+    // 並列処理（最大3ファイル同時）
+    const concurrency = 3;
+    for (let i = 0; i < pendingFiles.length; i += concurrency) {
+      const batch = pendingFiles.slice(i, i + concurrency);
+      await Promise.all(batch.map(processFile));
     }
-    return <File className="h-5 w-5 text-gray-500" />;
+
+    setIsProcessing(false);
+    
+    // 完了したファイルの結果を親コンポーネントに渡す
+    const completedFiles = files.filter(f => f.status === 'completed');
+    onFilesProcessed?.(completedFiles);
   };
 
-  // ステータスアイコンの取得
-  const getStatusIcon = (status: string) => {
+  const downloadResult = (fileData: FileWithProgress) => {
+    if (!fileData.result) return;
+
+    const blob = new Blob([fileData.result.markdown], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileData.file.name.replace('.pdf', '.md');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadAllResults = () => {
+    const completedFiles = files.filter(f => f.status === 'completed' && f.result);
+    
+    completedFiles.forEach((fileData, index) => {
+      setTimeout(() => downloadResult(fileData), index * 100); // 100ms間隔でダウンロード
+    });
+  };
+
+  const getStatusIcon = (status: FileWithProgress['status']) => {
     switch (status) {
-      case 'completed':
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case 'error':
-        return <AlertCircle className="h-5 w-5 text-red-500" />;
+      case 'pending':
+        return <Clock className="h-4 w-4 text-gray-500" />;
+      case 'uploading':
       case 'processing':
-        return <File className="h-5 w-5 text-blue-500 animate-pulse" />;
-      default:
-        return null;
+        return <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500" />;
+      case 'completed':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'error':
+        return <AlertCircle className="h-4 w-4 text-red-500" />;
     }
   };
+
+  const getStatusText = (status: FileWithProgress['status']) => {
+    switch (status) {
+      case 'pending': return '待機中';
+      case 'uploading': return 'アップロード中';
+      case 'processing': return '処理中';
+      case 'completed': return '完了';
+      case 'error': return 'エラー';
+    }
+  };
+
+  const completedCount = files.filter(f => f.status === 'completed').length;
+  const errorCount = files.filter(f => f.status === 'error').length;
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-6">
+    <div className={cn("space-y-4", className)}>
+      {/* ドロップゾーン */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5" />
-            複数ファイルアップロード
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* ドロップゾーン */}
+        <CardContent className="p-6">
           <div
             {...getRootProps()}
             className={cn(
-              'border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors',
-              'hover:border-primary hover:bg-primary/5',
-              isDragActive && 'border-primary bg-primary/10',
-              (isProcessing || disabled) && 'cursor-not-allowed opacity-50'
+              "border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer",
+              isDragActive 
+                ? "border-primary bg-primary/10" 
+                : "border-muted-foreground/25 hover:border-primary/50",
+              isProcessing && "opacity-50 cursor-not-allowed"
             )}
           >
             <input {...getInputProps()} />
+            <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
             
-            <div className="flex flex-col items-center space-y-4">
-              <Upload className="h-12 w-12 text-gray-400" />
-              
-              <div>
+            {isDragActive ? (
+              <p className="text-lg font-medium">ファイルをドロップしてください</p>
+            ) : (
+              <div className="space-y-2">
                 <p className="text-lg font-medium">
-                  {isDragActive 
-                    ? 'ファイルをドロップしてください' 
-                    : 'ファイルをドラッグ&ドロップまたはクリックして選択'
-                  }
+                  PDFファイルをドラッグ&ドロップまたはクリックして選択
                 </p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  対応形式: PDF, JPG, PNG, GIF, BMP, WEBP（最大{maxFiles}ファイル）
+                <p className="text-sm text-muted-foreground">
+                  最大{maxFiles}ファイルまで同時処理可能
                 </p>
               </div>
-            </div>
+            )}
           </div>
+        </CardContent>
+      </Card>
 
-          {/* ファイルリスト */}
-          {fileItems.length > 0 && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium">
-                  選択されたファイル ({fileItems.length}/{maxFiles})
-                </h3>
+      {/* ファイル一覧 */}
+      {files.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>アップロードファイル ({files.length})</CardTitle>
+              <div className="flex items-center space-x-2">
+                {completedCount > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={downloadAllResults}
+                    className="flex items-center space-x-1"
+                  >
+                    <Download className="h-4 w-4" />
+                    <span>全て保存</span>
+                  </Button>
+                )}
                 <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={clearAllFiles}
-                  disabled={isProcessing}
+                  onClick={processAllFiles}
+                  disabled={isProcessing || files.filter(f => f.status === 'pending').length === 0}
+                  className="flex items-center space-x-1"
                 >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  全てクリア
+                  <Upload className="h-4 w-4" />
+                  <span>
+                    {isProcessing ? '処理中...' : '変換開始'}
+                  </span>
                 </Button>
               </div>
+            </div>
+            
+            {/* 統計 */}
+            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+              <span>完了: {completedCount}</span>
+              <span>エラー: {errorCount}</span>
+              <span>残り: {files.filter(f => f.status === 'pending').length}</span>
+            </div>
+          </CardHeader>
 
-              <div className="space-y-2 max-h-60 overflow-y-auto">
-                {fileItems.map((item, index) => (
-                  <div
-                    key={index}
-                    className={cn(
-                      'flex items-center gap-3 p-3 border rounded-lg',
-                      item.status === 'completed' && 'bg-green-50 border-green-200',
-                      item.status === 'error' && 'bg-red-50 border-red-200',
-                      item.status === 'processing' && 'bg-blue-50 border-blue-200'
-                    )}
-                  >
-                    {getFileIcon(item.file)}
-                    
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {item.file.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatFileSize(item.file.size)}
+          <CardContent className="space-y-3">
+            {files.map((fileData) => (
+              <div key={fileData.id} className="border rounded-lg p-4 space-y-3">
+                {/* ファイル情報とステータス */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <FileText className="h-5 w-5 text-blue-500" />
+                    <div>
+                      <p className="font-medium">{fileData.file.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {(fileData.file.size / 1024 / 1024).toFixed(2)} MB
                       </p>
                     </div>
-
-                    {item.status === 'processing' && (
-                      <div className="w-20">
-                        <Progress value={item.progress} className="h-2" />
-                        <p className="text-xs text-center mt-1">{item.progress}%</p>
-                      </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-1">
+                      {getStatusIcon(fileData.status)}
+                      <span className="text-sm">{getStatusText(fileData.status)}</span>
+                    </div>
+                    
+                    {fileData.status === 'completed' && fileData.result && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => downloadResult(fileData)}
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
                     )}
-
-                    {getStatusIcon(item.status)}
-
-                    {!isProcessing && (
+                    
+                    {fileData.status === 'pending' && (
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => removeFile(index)}
-                        className="text-red-500 hover:text-red-700"
+                        onClick={() => removeFile(fileData.id)}
+
                       >
                         <X className="h-4 w-4" />
                       </Button>
                     )}
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 処理開始ボタン */}
-          {fileItems.length > 0 && (
-            <div className="space-y-4">
-              {isProcessing && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">全体の進捗</span>
-                    <span className="text-sm text-muted-foreground">{overallProgress}%</span>
-                  </div>
-                  <Progress value={overallProgress} className="h-2" />
                 </div>
-              )}
 
-              <Button
-                onClick={startBatchProcessing}
-                disabled={isProcessing || fileItems.length === 0}
-                className="w-full"
-              >
-                {isProcessing ? '処理中...' : '変換開始'}
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                {/* 進捗バー */}
+                {(fileData.status === 'uploading' || fileData.status === 'processing') && (
+                  <div className="space-y-1">
+                    <Progress value={fileData.progress} className="h-2" />
+                    <p className="text-xs text-muted-foreground text-right">
+                      {fileData.progress}%
+                    </p>
+                  </div>
+                )}
+
+                {/* 結果表示 */}
+                {fileData.status === 'completed' && fileData.result?.metadata?.qualityAnalysis && (
+                  <div className="bg-green-50 p-2 rounded text-sm">
+                    <p>✅ 変換完了 - 品質: {fileData.result.metadata.qualityAnalysis.completeness}%</p>
+                  </div>
+                )}
+
+                {/* エラー表示 */}
+                {fileData.status === 'error' && (
+                  <div className="bg-red-50 p-2 rounded text-sm text-red-700">
+                    <p>❌ {fileData.error}</p>
+                  </div>
+                )}
+
+                {/* ログ表示（詳細） */}
+                {fileData.logs.length > 1 && (
+                  <details className="text-xs text-muted-foreground">
+                    <summary className="cursor-pointer hover:text-foreground">
+                      詳細ログ ({fileData.logs.length})
+                    </summary>
+                    <div className="mt-1 space-y-1 pl-2 border-l-2 border-gray-200">
+                      {fileData.logs.map((log, index) => (
+                        <p key={index}>{log}</p>
+                      ))}
+                    </div>
+                  </details>
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
     </div>
   );
 }

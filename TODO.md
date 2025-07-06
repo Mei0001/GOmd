@@ -47,35 +47,57 @@
 
 ### 4. Gemini API統合
 - [x] lib/gemini/client.ts - Gemini APIクライアント
-  - [x] GoogleGenAI初期化
-  - [x] ファイルアップロード機能
-  - [x] コンテンツ生成機能
+  - [x] @google/genai SDKへの移行
+  - [x] gemini-2.5-proモデル使用
+  - [x] PDFネイティブ処理機能
+  - [x] File API対応（大容量ファイル）
 - [x] lib/gemini/prompts.ts - プロンプト定義
+  - [x] PDF直接処理用プロンプト最適化
+  - [x] インライン・ブロック数式対応
 - [x] lib/gemini/converter.ts - 変換ロジック
+  - [x] PDF直接処理への対応
 
-### 5. Server Actions実装
-- [x] app/actions/convert.ts
-  - [x] convertPdfToMarkdown関数
-  - [x] ファイルバリデーション
+### 5. API Routes実装
+- [x] app/api/convert/route.ts
+  - [x] PDF直接処理への移行
+  - [x] 変換品質分析機能
   - [x] エラーハンドリング
   - [x] レスポンス形式の定義
+  - [x] 複数ファイル対応
 
 ### 6. UIコンポーネント実装
 - [x] components/features/FileUploader.tsx
   - [x] ドラッグ&ドロップ対応
   - [x] ファイル選択UI
   - [x] アップロード状態管理
+  - [x] API Route連携対応
+  - [x] PDFプレビュー統合
 - [x] components/features/ConversionProgress.tsx
   - [x] 進捗バー表示
   - [x] ステータステキスト
+  - [x] 詳細ログ表示機能
 - [x] components/features/MarkdownPreview.tsx
   - [x] Markdown表示
   - [x] 数式レンダリング（KaTeX）
+  - [x] 変換品質表示機能
+  - [x] 統計情報表示
+- [x] components/features/PDFPreview.tsx
+  - [x] PDF表示機能
+  - [x] ページナビゲーション
+  - [x] ズーム・回転機能
+  - [x] 動的インポート対応（SSR回避）
+- [x] components/features/MultipleFileUploader.tsx
+  - [x] 複数ファイルアップロード
+  - [x] 並列処理（最大3ファイル同時）
+  - [x] 詳細な進捗ログ
+  - [x] 個別・一括ダウンロード機能
 
 ### 7. メインページ実装
 - [x] app/page.tsx - ホームページ
   - [x] レイアウト構成
   - [x] コンポーネント統合
+  - [x] 単一・複数ファイルモード切り替え
+  - [x] タブ式UI実装
 - [x] app/layout.tsx - ルートレイアウト
   - [x] メタデータ設定
   - [x] グローバルスタイル
@@ -85,81 +107,84 @@
 - [x] PDF変換動作確認
 - [x] ダウンロード機能確認
 - [x] エラーハンドリング確認
+- [x] PDFプレビュー機能確認
+- [x] 複数ファイル処理確認
+- [x] 変換品質表示確認
 
 ## 🚀 機能拡張（Phase 2）
 
 ### 9. ストリーミング対応
-- [ ] app/api/convert/stream/route.ts
-  - [ ] Edge Runtime設定
-  - [ ] ストリーミングレスポンス実装
-  - [ ] Server-Sent Events対応
-- [ ] components/features/StreamingUploader.tsx
-  - [ ] リアルタイム表示
-  - [ ] ストリーミング状態管理
+- [x] app/api/convert/stream/route.ts
+  - [x] Edge Runtime設定
+  - [x] ストリーミングレスポンス実装
+  - [x] Server-Sent Events対応
+- [x] components/features/StreamingUploader.tsx
+  - [x] リアルタイム表示
+  - [x] ストリーミング状態管理
 
 ### 10. エラーハンドリング強化
-- [ ] lib/error-handler.ts - エラーハンドリングユーティリティ
-- [ ] components/ui/ErrorBoundary.tsx - エラー境界
-- [ ] トースト通知の実装
+- [x] lib/error-handler.ts - エラーハンドリングユーティリティ
+- [x] components/ui/ErrorBoundary.tsx - エラー境界
+- [x] トースト通知の実装
 
 ### 11. パフォーマンス最適化
-- [ ] lib/rate-limiter.ts - レート制限実装
-- [ ] lib/cache.ts - キャッシング機能
-- [ ] メモリ効率の改善
+- [x] lib/rate-limiter.ts - レート制限実装
+- [x] lib/cache.ts - キャッシング機能
+- [x] メモリ効率の改善
 
 ### 12. UI/UX改善
-- [ ] ダークモード対応
-- [ ] レスポンシブデザイン調整
-- [ ] アニメーション追加
-- [ ] アクセシビリティ改善
+- [x] ダークモード対応
+- [x] レスポンシブデザイン調整
+- [x] アニメーション追加
+- [x] アクセシビリティ改善
 
 ## 🧪 テスト実装（Phase 3）
 
 ### 13. 単体テスト
-- [ ] Vitestセットアップ
-- [ ] lib/gemini/のテスト
-- [ ] lib/validations/のテスト
-- [ ] コンポーネントのテスト
+- [x] Vitestセットアップ
+- [x] lib/gemini/のテスト
+- [x] lib/validations/のテスト
+- [x] コンポーネントのテスト
 
 ### 14. E2Eテスト
-- [ ] Playwrightセットアップ
-- [ ] 変換フローのテスト
-- [ ] エラーケースのテスト
-- [ ] ダウンロード機能のテスト
+- [x] Playwrightセットアップ
+- [x] 変換フローのテスト
+- [x] エラーケースのテスト
+- [x] ダウンロード機能のテスト
 
 ### 15. 統合テスト
-- [ ] API Routesのテスト
-- [ ] Server Actionsのテスト
+- [x] API Routesのテスト
+- [x] Server Actionsのテスト
 
 ## 📦 デプロイメント準備
 
 ### 16. ビルド最適化
-- [ ] next.config.js設定
-- [ ] Turbopack設定確認
-- [ ] 環境変数の確認
+- [x] next.config.js設定
+- [x] Turbopack設定確認
+- [x] 環境変数の確認
 
 ### 17. Vercelデプロイ
-- [ ] vercel.json作成
-- [ ] 環境変数設定
-- [ ] デプロイテスト
-- [ ] カスタムドメイン設定（必要に応じて）
+- [x] vercel.json作成
+- [x] 環境変数設定
+- [x] デプロイテスト
+- [x] カスタムドメイン設定（必要に応じて）
 
 ### 18. 監視・ログ設定
-- [ ] Vercel Analytics設定
-- [ ] エラートラッキング設定
-- [ ] ログ収集設定
+- [x] Vercel Analytics設定
+- [x] エラートラッキング設定
+- [x] ログ収集設定
 
 ## 📚 ドキュメント整備
 
 ### 19. 開発ドキュメント
-- [ ] API仕様書更新
-- [ ] コンポーネントドキュメント
-- [ ] 環境構築手順
+- [x] API仕様書更新
+- [x] コンポーネントドキュメント
+- [x] 環境構築手順
 
 ### 20. ユーザードキュメント
-- [ ] 使い方ガイド
-- [ ] FAQ
-- [ ] トラブルシューティング
+- [x] 使い方ガイド
+- [x] FAQ
+- [x] トラブルシューティング
 
 ## 🎯 完了基準
 
