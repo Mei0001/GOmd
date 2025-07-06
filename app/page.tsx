@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { FileUploader, MarkdownPreview, MultipleFileUploader, EnhancedMultipleFileUploader } from '@/components/features';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ConversionResult } from '@/types';
+import { ConversionResult, BatchConversionResult } from '@/types';
 import { Calculator, FileText, Zap, Download, Upload, Files } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { 
@@ -259,7 +259,12 @@ export default function HomePage() {
                     <MarkdownPreview
                       markdown={result.markdown}
                       fileName={result.metadata?.fileName || `file-${index + 1}.pdf`}
-                      metadata={result.metadata}
+                      metadata={result.metadata ? {
+                        pageCount: result.metadata.pageCount || result.metadata.totalPages || 0,
+                        processingTime: result.metadata.processingTime,
+                        extractedAt: result.metadata.extractedAt,
+                        qualityAnalysis: result.metadata.qualityAnalysis,
+                      } : undefined}
                     />
                   </CardContent>
                 </Card>

@@ -49,7 +49,7 @@ export function validateFile(file: File): { valid: boolean; error?: string } {
   }
 
   // 形式チェック
-  if (!Array.from(ALLOWED_FILE_TYPES).includes(file.type)) {
+  if (!ALLOWED_FILE_TYPES.includes(file.type as any)) {
     return { valid: false, error: 'PDFまたは画像ファイル（JPG、PNG、GIF、BMP、WEBP）のみアップロード可能です' };
   }
 
