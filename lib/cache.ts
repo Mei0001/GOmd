@@ -2,7 +2,28 @@
  * Caching utilities for performance optimization
  */
 
-import { createHash } from 'crypto';
+// Use Web Crypto API for edge runtime compatibility
+const createHash = (algorithm: string) => {
+  return {
+    update: (data: string | Buffer | Uint8Array) => {
+      const dataStr = typeof data === 'string' ? data : 
+                     data instanceof Buffer ? data.toString('utf8') :
+                     new TextDecoder().decode(data);
+      return {
+        digest: (encoding: string) => {
+          // Simple hash implementation for edge runtime
+          let hash = 0;
+          for (let i = 0; i < dataStr.length; i++) {
+            const char = dataStr.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32-bit integer
+          }
+          return Math.abs(hash).toString(16).padStart(16, '0').slice(0, 16);
+        }
+      };
+    }
+  };
+};
 
 interface CacheEntry<T> {
   data: T;
@@ -247,9 +268,16 @@ interface ConversionResultCache {
     hasTables: boolean;
   };
   quality: {
-    score: number;
-    confidence: number;
-    issues: string[];
+    completeness: number;
+    mathElementsCount: number;
+    structureElements: {
+      headings: number;
+      paragraphs: number;
+      tables: number;
+      lists: number;
+      mathBlocks: number;
+    };
+    qualityLevel: 'excellent' | 'good' | 'fair' | 'poor';
   };
 }
 

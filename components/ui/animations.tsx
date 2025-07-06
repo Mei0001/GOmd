@@ -238,8 +238,8 @@ export function CounterAnimation({
       transition={{ duration: 0.5 }}
     >
       <motion.span
-        initial={from}
-        animate={to}
+        initial={{ opacity: 0, y: from }}
+        animate={{ opacity: 1, y: to }}
         transition={{ duration, ease: "easeOut" }}
         onUpdate={(latest) => {
           if (typeof latest === 'number') {

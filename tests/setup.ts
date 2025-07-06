@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
+import React from 'react';
 
 // Mock environment variables
 process.env.NEXT_PUBLIC_NODE_ENV = 'test';
@@ -30,8 +31,8 @@ vi.mock('framer-motion', () => ({
 
 // Mock react-pdf
 vi.mock('react-pdf', () => ({
-  Document: ({ children }: { children: React.ReactNode }) => <div data-testid="pdf-document">{children}</div>,
-  Page: ({ pageNumber }: { pageNumber: number }) => <div data-testid={`pdf-page-${pageNumber}`}>Page {pageNumber}</div>,
+  Document: ({ children }: { children: React.ReactNode }) => React.createElement('div', { 'data-testid': 'pdf-document' }, children),
+  Page: ({ pageNumber }: { pageNumber: number }) => React.createElement('div', { 'data-testid': `pdf-page-${pageNumber}` }, `Page ${pageNumber}`),
   pdfjs: {
     GlobalWorkerOptions: {
       workerSrc: '',
