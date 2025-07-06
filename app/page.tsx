@@ -1,18 +1,29 @@
 'use client';
 
 import React, { useState } from 'react';
-import { FileUploader, MarkdownPreview } from '@/components/features';
+import { FileUploader, MultipleFileUploader, MarkdownPreview } from '@/components/features';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ConversionResult } from '@/types';
-import { Calculator, FileText, Zap, Download } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ConversionResult, BatchConversionResult } from '@/types';
+import { Calculator, FileText, Zap, Download, Upload, Files } from 'lucide-react';
 
 export default function HomePage() {
   const [conversionResult, setConversionResult] = useState<ConversionResult | null>(null);
+  const [batchConversionResult, setBatchConversionResult] = useState<BatchConversionResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [uploadMode, setUploadMode] = useState<'single' | 'multiple'>('single');
 
-  // アップロード完了時の処理
+  // 単一ファイルアップロード完了時の処理
   const handleUploadComplete = (result: ConversionResult) => {
     setConversionResult(result);
+    setBatchConversionResult(null);
+    setError(null);
+  };
+
+  // 複数ファイルアップロード完了時の処理
+  const handleBatchUploadComplete = (result: BatchConversionResult) => {
+    setBatchConversionResult(result);
+    setConversionResult(null);
     setError(null);
   };
 
@@ -20,6 +31,7 @@ export default function HomePage() {
   const handleError = (errorMessage: string) => {
     setError(errorMessage);
     setConversionResult(null);
+    setBatchConversionResult(null);
   };
 
   return (
@@ -89,16 +101,45 @@ export default function HomePage() {
       {/* ファイルアップロードセクション */}
       <div className="space-y-6">
         <div className="text-center">
-          <h2 className="text-2xl font-semibold mb-2">PDFファイルをアップロード</h2>
+          <h2 className="text-2xl font-semibold mb-2">ファイルをアップロード</h2>
           <p className="text-muted-foreground">
-            論文、教科書、学校資料など、数式を含むあらゆるPDFに対応
+            PDF、画像ファイルなど、様々な形式のファイルに対応
           </p>
         </div>
 
-        <FileUploader
-          onUploadComplete={handleUploadComplete}
-          onError={handleError}
-        />
+        {/* アップロードモード切り替え */}
+        <div className="flex justify-center space-x-4">
+          <Button
+            variant={uploadMode === 'single' ? 'default' : 'outline'}
+            onClick={() => setUploadMode('single')}
+            className="flex items-center gap-2"
+          >
+            <Upload className="h-4 w-4" />
+            単一ファイル
+          </Button>
+          <Button
+            variant={uploadMode === 'multiple' ? 'default' : 'outline'}
+            onClick={() => setUploadMode('multiple')}
+            className="flex items-center gap-2"
+          >
+            <Files className="h-4 w-4" />
+            複数ファイル
+          </Button>
+        </div>
+
+        {/* アップロードコンポーネント */}
+        {uploadMode === 'single' ? (
+          <FileUploader
+            onUploadComplete={handleUploadComplete}
+            onError={handleError}
+          />
+        ) : (
+          <MultipleFileUploader
+            onUploadComplete={handleBatchUploadComplete}
+            onError={handleError}
+            maxFiles={5}
+          />
+        )}
       </div>
 
       {/* 変換結果表示 */}
@@ -116,6 +157,39 @@ export default function HomePage() {
             fileName={conversionResult.metadata?.fileName || 'document.pdf'}
             metadata={conversionResult.metadata}
           />
+        </div>
+      )}
+
+      {/* バッチ変換結果表示 */}
+      {batchConversionResult?.success && batchConversionResult.results && (
+        <div className="space-y-4">
+          <div className="text-center">
+            <h2 className="text-2xl font-semibold mb-2">バッチ変換結果</h2>
+            <p className="text-muted-foreground">
+              {batchConversionResult.metadata?.successfulFiles || 0} / {batchConversionResult.metadata?.totalFiles || 0} ファイルが正常に変換されました
+            </p>
+          </div>
+
+          <div className="grid gap-4">
+            {batchConversionResult.results.map((result, index) => (
+              result.success && result.markdown && (
+                <Card key={index}>
+                  <CardHeader>
+                    <CardTitle className="text-lg">
+                      {result.metadata?.fileName || `ファイル ${index + 1}`}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <MarkdownPreview
+                      markdown={result.markdown}
+                      fileName={result.metadata?.fileName || `file-${index + 1}.pdf`}
+                      metadata={result.metadata}
+                    />
+                  </CardContent>
+                </Card>
+              )
+            ))}
+          </div>
         </div>
       )}
 
