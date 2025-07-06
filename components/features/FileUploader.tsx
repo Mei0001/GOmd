@@ -164,10 +164,9 @@ export function FileUploader({ onUploadComplete, onError, disabled = false, show
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-4">
-      <div className={cn("grid gap-4", uploadState.file && showPreview ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1")}>
-        <Card>
-          <CardContent className="p-6">
+    <div className="w-full space-y-4">
+      <Card>
+        <CardContent className="p-6">
           {/* ドロップゾーン */}
           <div
             {...getRootProps()}
@@ -262,9 +261,10 @@ export function FileUploader({ onUploadComplete, onError, disabled = false, show
 
       {/* PDFプレビュー */}
       {uploadState.file && showPreview && showPDFPreview && (
-        <PDFPreview file={uploadState.file} />
+        <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+          <PDFPreview file={uploadState.file} />
+        </div>
       )}
-    </div>
     </div>
   );
 }

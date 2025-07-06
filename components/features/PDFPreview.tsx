@@ -21,7 +21,8 @@ const Page = dynamic(() => import('react-pdf').then(mod => ({ default: mod.Page 
 const setupPDFWorker = async () => {
   if (typeof window !== 'undefined') {
     const { pdfjs } = await import('react-pdf');
-    pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+    // CDNから確実に読み込めるURLを使用
+    pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
   }
 };
 
