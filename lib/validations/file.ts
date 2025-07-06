@@ -31,7 +31,15 @@ export const ConversionOptionsSchema = z.object({
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 // 許可されるファイル形式
-export const ALLOWED_FILE_TYPES = ['application/pdf'] as const;
+export const ALLOWED_FILE_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/gif',
+  'image/bmp',
+  'image/webp'
+] as const;
 
 // ファイルバリデーション関数
 export function validateFile(file: File): { valid: boolean; error?: string } {
@@ -41,8 +49,8 @@ export function validateFile(file: File): { valid: boolean; error?: string } {
   }
 
   // 形式チェック
-  if (!ALLOWED_FILE_TYPES.includes(file.type as any)) {
-    return { valid: false, error: 'PDFファイルのみアップロード可能です' };
+  if (!Array.from(ALLOWED_FILE_TYPES).includes(file.type)) {
+    return { valid: false, error: 'PDFまたは画像ファイル（JPG、PNG、GIF、BMP、WEBP）のみアップロード可能です' };
   }
 
   // ファイル名チェック

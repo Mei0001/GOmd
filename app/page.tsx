@@ -17,14 +17,25 @@ import {
 
 type UploadMode = 'single' | 'multiple';
 
+
 export default function HomePage() {
   const [conversionResult, setConversionResult] = useState<ConversionResult | null>(null);
+  const [batchConversionResult, setBatchConversionResult] = useState<BatchConversionResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploadMode, setUploadMode] = useState<UploadMode>('single');
 
-  // アップロード完了時の処理
+
+  // 単一ファイルアップロード完了時の処理
   const handleUploadComplete = (result: ConversionResult) => {
     setConversionResult(result);
+    setBatchConversionResult(null);
+    setError(null);
+  };
+
+  // 複数ファイルアップロード完了時の処理
+  const handleBatchUploadComplete = (result: BatchConversionResult) => {
+    setBatchConversionResult(result);
+    setConversionResult(null);
     setError(null);
   };
 
@@ -32,6 +43,7 @@ export default function HomePage() {
   const handleError = (errorMessage: string) => {
     setError(errorMessage);
     setConversionResult(null);
+    setBatchConversionResult(null);
   };
 
   // 複数ファイル処理完了時の処理
@@ -180,6 +192,7 @@ export default function HomePage() {
           )}
         </FadeInWhenVisible>
 
+
       {/* 変換結果表示 */}
       {conversionResult?.success && conversionResult.markdown && (
         <div className="space-y-4">
@@ -195,6 +208,39 @@ export default function HomePage() {
             fileName={conversionResult.metadata?.fileName || 'document.pdf'}
             metadata={conversionResult.metadata}
           />
+        </div>
+      )}
+
+      {/* バッチ変換結果表示 */}
+      {batchConversionResult?.success && batchConversionResult.results && (
+        <div className="space-y-4">
+          <div className="text-center">
+            <h2 className="text-2xl font-semibold mb-2">バッチ変換結果</h2>
+            <p className="text-muted-foreground">
+              {batchConversionResult.metadata?.successfulFiles || 0} / {batchConversionResult.metadata?.totalFiles || 0} ファイルが正常に変換されました
+            </p>
+          </div>
+
+          <div className="grid gap-4">
+            {batchConversionResult.results.map((result, index) => (
+              result.success && result.markdown && (
+                <Card key={index}>
+                  <CardHeader>
+                    <CardTitle className="text-lg">
+                      {result.metadata?.fileName || `ファイル ${index + 1}`}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <MarkdownPreview
+                      markdown={result.markdown}
+                      fileName={result.metadata?.fileName || `file-${index + 1}.pdf`}
+                      metadata={result.metadata}
+                    />
+                  </CardContent>
+                </Card>
+              )
+            ))}
+          </div>
         </div>
       )}
 

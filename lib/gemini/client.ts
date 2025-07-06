@@ -84,6 +84,31 @@ export class GeminiClient {
     }
   }
 
+  // 画像ファイルを直接処理してMarkdownを生成
+  async generateContentFromImage(imageBuffer: Buffer, mimeType: string, prompt: string): Promise<string> {
+    try {
+      const contents = [
+        { text: prompt },
+        {
+          inlineData: {
+            mimeType: mimeType,
+            data: imageBuffer.toString('base64')
+          }
+        }
+      ];
+
+      const response = await this.ai.models.generateContent({
+        model: this.model,
+        contents: contents
+      });
+
+      return response.text || '';
+    } catch (error) {
+      console.error('Gemini 画像処理エラー:', error);
+      throw new Error('画像の処理に失敗しました');
+    }
+  }
+
   // API接続テスト
   async testConnection(): Promise<boolean> {
     try {

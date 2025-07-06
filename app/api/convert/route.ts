@@ -15,14 +15,23 @@ async function handleConversion(request: NextRequest) {
       { status: 400 }
     );
   }
-
-  // ファイル検証
-  if (file.type !== 'application/pdf') {
-    return NextResponse.json(
-      { error: 'PDFファイルのみアップロード可能です' },
-      { status: 400 }
-    );
-  }
+    // ファイル検証
+    const allowedTypes = [
+      'application/pdf',
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/gif',
+      'image/bmp',
+      'image/webp'
+    ];
+    
+    if (allowedTypes.indexOf(file.type) === -1) {
+      return NextResponse.json(
+        { error: 'PDFまたは画像ファイル（JPG、PNG、GIF、BMP、WEBP）のみアップロード可能です' },
+        { status: 400 }
+      );
+    }
 
   // Generate cache key
   const fileHash = await cacheUtils.getFileHash(file);

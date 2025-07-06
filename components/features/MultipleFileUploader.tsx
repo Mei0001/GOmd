@@ -91,6 +91,7 @@ export function MultipleFileUploader({
       addLog(id, 'サーバーに送信中...');
 
       const response = await fetch('/api/convert', {
+
         method: 'POST',
         body: formData,
       });
@@ -318,6 +319,7 @@ export function MultipleFileUploader({
                         variant="ghost"
                         size="sm"
                         onClick={() => removeFile(fileData.id)}
+
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -367,6 +369,7 @@ export function MultipleFileUploader({
           </CardContent>
         </Card>
       )}
+
     </div>
   );
 }
