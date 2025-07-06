@@ -2,19 +2,12 @@
 const nextConfig = {
   // Performance optimizations
   experimental: {
-    turbo: {
-      rules: {
-        '*.svg': {
-          loaders: ['@svgr/webpack'],
-          as: '*.js',
-        },
-      },
-    },
-    // Enable concurrent features
-    serverComponentsExternalPackages: ['@google/generative-ai'],
     // Optimize bundle splitting
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
   },
+  
+  // External packages for server components
+  serverExternalPackages: ['@google/generative-ai'],
 
   // Compiler optimizations
   compiler: {
@@ -134,8 +127,14 @@ const nextConfig = {
   // Enable gzip compression
   compress: true,
 
-  // Power configuration for Turbopack
+  // Turbopack configuration (now stable)
   turbopack: {
+    rules: {
+      '*.svg': {
+        loaders: ['@svgr/webpack'],
+        as: '*.js',
+      },
+    },
     resolveAlias: {
       underscore: 'lodash',
       mocha: { browser: 'mocha/browser-entry.js' },
